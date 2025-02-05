@@ -1,6 +1,7 @@
 ﻿using AprendendoUsoDoCache.Entity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
+using System.Security.Principal;
 
 namespace AprendendoUsoDoCache.Controllers
 {
@@ -48,6 +49,41 @@ namespace AprendendoUsoDoCache.Controllers
             }
 
             return Ok(produtos);
+        }
+
+        [HttpGet("{id:int}")]
+        public ActionResult<ProdutoEntity> GetProdutosId( int? id)
+        {
+            var CacheCategoriaKey = $"CacheCategoria_{id}";
+
+            if (!_cache.TryGetValue(CacheCategoriaKey, out ProdutoEntity? produto))
+            {
+
+                 
+                 ProdutoList.ForEach(p =>
+                {
+                    if(p.Id == id)
+                    {
+                        produto = p;
+                    } 
+                });
+
+                if (produto is not null)
+                {
+                    var cacheOptions = new MemoryCacheEntryOptions
+                    {
+                        //Tempo de expiração absoluta
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30),
+                        //Tempo de expiração deslizante =  Item será removido caso ele não seja acessado em 15 segundos
+                        SlidingExpiration = TimeSpan.FromSeconds(15),
+                        //Prioridade Alta, será permitido na memória por mais tempo
+                        Priority = CacheItemPriority.High
+                    };
+                    _cache.Set(CacheCategoriaKey, produto, cacheOptions);
+                }
+            }
+
+            return Ok(produto);
         }
 
 
